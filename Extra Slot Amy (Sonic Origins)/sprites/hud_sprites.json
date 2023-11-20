@@ -1,0 +1,9 @@
+{
+	"hud_lives_icon_slot3":  { "File": "life_icon.png", "Rect": "0,0,63,16", "Center": "0,0" },
+	"super_hud_lives_icon_slot3":  { "File": "life_icon.png", "Rect": "0,0,62,16", "Center": "0,0" },
+	"hyper_hud_lives_icon_slot3":  { "File": "life_icon.png", "Rect": "0,0,63,16", "Center": "0,0" },
+	"hud_bonus_icon_slot3":  { "File": "results_icons.png", "Rect": "0,61,16,19", "Center": "0,0" },
+	"continue_icon_slot3":  { "File": "results_icons.png", "Rect": "0,80,20,27", "Center": "10,30" },
+	"result_nameplate_slot3":  { "File": "results_character_amy.png", "Rect": "0,0,88,16", "Center": "-4,0" },
+	"special_results_name_slot3":  { "File": "results_character_amy.png", "Rect": "0,0,88,16", "Center": "-4,0" }
+}

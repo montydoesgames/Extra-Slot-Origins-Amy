@@ -1,0 +1,4 @@
+{
+	"signpost_slot3": { "File": "signpost.bmp", "Rect": "0,0,48,32", "Center": "24,16" },
+    "maniainsp_signpost_slot3":  { "File": "Signpost_Smooth.bmp", "Rect": "0,0,48,32", "Center": "24,16" },
+}

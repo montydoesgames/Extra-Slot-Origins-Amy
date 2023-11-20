@@ -1,0 +1,37 @@
+{
+// Hammer Spinning in the air
+	"character_slot3_hammerspin_0": { "File": "HammerSpin.bmp", "Rect":  "1,1,52,56", "Center": "26,28" },
+	"character_slot3_hammerspin_1": { "File": "HammerSpin.bmp", "Rect": "54,1,48,56", "Center": "24,28" },
+	"character_slot3_hammerspin_2": { "File": "HammerSpin.bmp", "Rect":  "103,1,52,56", "Center": "26,28" },
+	"character_slot3_hammerspin_3": { "File": "HammerSpin.bmp", "Rect": "156,1,48,56", "Center": "24,28" },
+	"character_slot3_hammerspin_4": { "File": "HammerSpin.bmp", "Rect":  "205,1,48,56", "Center": "24,28" },
+	"character_slot3_hammerspin_5": { "File": "HammerSpin.bmp", "Rect": "254,1,52,56", "Center": "26,28" },
+	"character_slot3_hammerspin_6": { "File": "HammerSpin.bmp", "Rect":  "307,1,52,56", "Center": "26,28" },
+	"character_slot3_hammerspin_7": { "File": "HammerSpin.bmp", "Rect": "361,1,48,56", "Center": "24,28" },
+
+// Hammer Rush
+	"character_slot3_hammerrush_0": { "File": "HammerRush.bmp", "Rect":  "0,0,48,48", "Center": "24,25" },
+	"character_slot3_hammerrush_1": { "File": "HammerRush.bmp", "Rect":  "49,0,48,48", "Center": "24,25" },
+	"character_slot3_hammerrush_2": { "File": "HammerRush.bmp", "Rect":  "98,0,48,48", "Center": "24,25" },
+	"character_slot3_hammerrush_3": { "File": "HammerRush.bmp", "Rect":  "147,0,52,48", "Center": "24,25" },
+	"character_slot3_hammerrush_4": { "File": "HammerRush.bmp", "Rect":  "200,0,48,48", "Center": "24,25" },
+	"character_slot3_hammerrush_5": { "File": "HammerRush.bmp", "Rect":  "249,0,48,48", "Center": "24,25" },
+	"character_slot3_hammerrush_6": { "File": "HammerRush.bmp", "Rect":  "298,0,48,48", "Center": "24,25" },
+	"character_slot3_hammerrush_7": { "File": "HammerRush.bmp", "Rect":  "347,0,52,48", "Center": "24,25" },
+
+//The actual hammer itself
+	"character_slot3_hammer_0": { "File": "HammerSprites.bmp", "Rect":  "1,0,48,48", "Center": "24,24" },
+	"character_slot3_hammer_1": { "File": "HammerSprites.bmp", "Rect":  "50,0,48,48", "Center": "24,24" },
+	"character_slot3_hammer_2": { "File": "HammerSprites.bmp", "Rect":  "99,0,48,48", "Center": "24,24" },
+	"character_slot3_hammer_3": { "File": "HammerSprites.bmp", "Rect":  "148,0,48,48", "Center": "24,24" },
+	"character_slot3_hammer_4": { "File": "HammerSprites.bmp", "Rect":  "197,0,48,48", "Center": "24,24" },
+	"character_slot3_hammer_5": { "File": "HammerSprites.bmp", "Rect":  "246,0,48,48", "Center": "24,24" },
+	"character_slot3_hammer_6": { "File": "HammerSprites.bmp", "Rect":  "295,0,48,48", "Center": "24,24" },
+	"character_slot3_hammer_7": { "File": "HammerSprites.bmp", "Rect":  "344,0,48,48", "Center": "24,24" },
+
+//Idle anim for throwing
+	"character_slot3_throw_0": { "File": "throw.bmp", "Rect":  "0,0,48,48", "Center": "24,25" },
+	"character_slot3_throw_1": { "File": "throw.bmp", "Rect":  "49,0,48,48", "Center": "24,25" },
+	"character_slot3_throw_2": { "File": "throw.bmp", "Rect":  "98,0,48,48", "Center": "24,25" },
+	"character_slot3_throw_3": { "File": "throw.bmp", "Rect":  "147,0,48,48", "Center": "24,25" },
+}

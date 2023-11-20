@@ -1,0 +1,11 @@
+{
+	"dataSel_savePortrait_slot3":  { "File": "Portraits.png", "Rect": "1,1,80,56", "Center": "40,120" },
+	"dataSel_savePortrait_superslot3":  { "File": "Portraits.png", "Rect": "82,1,80,56", "Center": "40,120" },
+	"dataSel_savePortrait_clear_slot3":  { "File": "Portraits.png", "Rect": "163,1,80,56", "Center": "40,120" },
+	
+	"ESS_Zone_Es3_0":  { "File": "Portraits.png", "Rect": "1,1,80,56", "Center": "40,28" },
+	"ESS_Zone_Es3_1":  { "File": "Portraits.png", "Rect": "82,1,80,56", "Center": "40,28" },
+	"ESS_Zone_Es3_2":  { "File": "Portraits.png", "Rect": "163,1,80,56", "Center": "40,28" },
+	"menu_thumb_detailPanel_esoriginsamy": { "File": "AchievementsPlus.png", "Rect": "0,0,65,26", "Center": "0,0" },
+	"menu_thumb_detailPanel_esoriginsamyjust": { "File": "JustAmy.png", "Rect": "0,0,65,26", "Center": "0,0" },
+}

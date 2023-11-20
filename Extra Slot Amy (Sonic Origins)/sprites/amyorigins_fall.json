@@ -1,0 +1,4 @@
+{
+	"slot3_falling_0":  { "File": "fall.bmp", "Rect": "0,1,48,52", "Center": "20,23" },
+	"slot3_falling_1":  { "File": "fall.bmp", "Rect": "50,1,48,52", "Center": "20,23" }
+}

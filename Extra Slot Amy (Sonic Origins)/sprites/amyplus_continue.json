@@ -1,0 +1,4 @@
+{
+	"character_slot3_continue_0x00": { "File": "amyplus_continue.bmp", "Rect": "8,8,24,40", "Center": "12,20" },
+	"character_slot3_continue_0x01": { "File": "amyplus_continue.bmp", "Rect": "40,8,24,40", "Center": "12,26" }
+}

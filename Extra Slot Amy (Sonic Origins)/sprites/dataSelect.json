@@ -1,0 +1,8 @@
+{
+	"dataSel_slot3":  { "File": "dataSel_Amyplus.png", "Rect": "0,0,45,45", "Center": "12,43" },
+	"dataSel_lifeContinue_slot3":  { "File": "dataselectlife.png", "Rect": "0,4,26,45", "Center": "0,0" },
+	"ESS_Cont_Es3":    { "File": "dataselectlife.png", "Rect": "0,20,20,24", "Center": "10,24" },
+	"ESS_Life_Es3":  { "File": "life_icon.png", "Rect": "0,0,16,16", "Center": "8,16" },
+	"ESS_Char_Es3":  { "File": "dataSel_Amyplus.png", "Rect": "0,0,45,45", "Center": "12,43" },
+}}
+}

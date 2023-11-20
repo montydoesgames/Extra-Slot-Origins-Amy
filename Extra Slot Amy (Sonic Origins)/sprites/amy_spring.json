@@ -1,0 +1,7 @@
+{
+	"character_slot3_springtwirl_0":  { "File": "amyplus_twirl.bmp", "Rect": "0,0,40,46", "Center": "20,21" },
+	"character_slot3_springtwirl_1":  { "File": "amyplus_twirl.bmp", "Rect": "41,0,40,46", "Center": "20,21" },
+	"character_slot3_springtwirl_2":  { "File": "amyplus_twirl.bmp", "Rect": "82,0,40,46", "Center": "20,21" },
+	"character_slot3_springtwirl_3":  { "File": "amyplus_twirl.bmp", "Rect": "123,0,40,46", "Center": "20,21" },
+	"character_slot3_springtwirl_4":  { "File": "amyplus_twirl.bmp", "Rect": "164,0,40,46", "Center": "20,21" }
+}

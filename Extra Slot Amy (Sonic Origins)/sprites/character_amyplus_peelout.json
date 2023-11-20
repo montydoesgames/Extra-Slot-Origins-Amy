@@ -1,0 +1,6 @@
+{
+	"character_slot3_peelout_0":  { "File": "peelout.bmp", "Rect": "0,0,40,40", "Center": "20,20" },
+	"character_slot3_peelout_1":  { "File": "peelout.bmp", "Rect": "40,0,40,40", "Center": "20,20" },
+	"character_slot3_peelout_2":  { "File": "peelout.bmp", "Rect": "80,0,40,40", "Center": "20,20" },
+	"character_slot3_peelout_3":  { "File": "peelout.bmp", "Rect": "120,0,40,40", "Center": "20,20" }
+}
