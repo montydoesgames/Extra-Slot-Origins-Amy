@@ -1,0 +1,288 @@
+global u8 OriginsAmy.HammerCount
+
+//Thank you so much funniman for letting me use the OriginsAmy Hammer code!!!
+function void OriginsAmy_Hammer.spawn()
+{
+	u32 A1backup = A1
+	if (allocDynamicObjectStd())
+	{
+			++OriginsAmy.HammerCount
+		if (OriginsAmy.HammerCount > 5)
+		    return
+
+			objA1.update_address = 0x212250
+			objA1.render_flags = (render_flag.WORLD | render_flag.VISIBLE)
+			objA1.sprite_priority = 0x200
+			objA1.box_size.x = 0x24
+			objA1.box_size.y = 0x24
+			objA1.sprite_attributes = objA0.sprite_attributes
+			objA1.position.y = objA0.position.y
+			objA1.position.x = objA0.position.x
+			objA1.velocity.y = -0x400
+
+			if (char.flags & char.flag.IN_AIR)
+			    objA1.velocity.x = (objA0.render_flags & render_flag.FLIP_X) ? (char.velocity.x - 0x200) : (char.velocity.x + 0x200)
+            else
+                objA1.velocity.x = (objA0.render_flags & render_flag.FLIP_X) ? (char.groundspeed - 0x200) : (char.groundspeed + 0x200)
+
+			objA1.hitbox_extends.x = 9
+			objA1.hitbox_extends.y = 16
+			if (objA1.velocity.x > 0)
+			{
+				objA1.render_flags |= render_flag.FLIP_X
+			}
+	       		playSound(SFX_BOMBFALL)
+			OriginsAmy.coolDown = 20
+			objA1.value2f = OriginsAmy.HammerCount
+			if OriginsAmy.HammerCount == 1 //it hurts to do this, but this supports at most 5 Hammers all at once
+			{
+				A0Hammer = A1
+			}
+			else if OriginsAmy.HammerCount == 2
+			{
+				A0Hammer2 = A1
+			}
+			else if OriginsAmy.HammerCount == 3
+			{
+				A0Hammer3 = A1
+			}
+			else if OriginsAmy.HammerCount == 4
+			{
+				A0Hammer4 = A1
+			}
+			else if OriginsAmy.HammerCount == 5
+			{
+				A0Hammer5 = A1
+			}
+			objA1.value26 = 0
+			objA1.value39 = 0
+	}
+	A1 = A1backup
+}
+
+//# address-hook(0x212250)
+function void Hammer.BaseUpdate()
+{
+	if !(objA0.render_flags & render_flag.VISIBLE) || objA0.value39 == 1
+	{
+		if objA0.value2f == 1 //it hurts to do this
+		{
+			A0Hammer = 0
+		}
+		else if objA0.value2f == 2
+		{
+			A0Hammer2 = 0
+		}
+		else if objA0.value2f == 3
+		{
+			A0Hammer3 = 0
+		}
+		else if objA0.value2f == 4
+		{
+			A0Hammer4 = 0
+		}
+		else if objA0.value2f == 5
+		{
+			A0Hammer5 = 0
+		}
+		--OriginsAmy.HammerCount
+		UnloadObject()
+		return
+	}
+    
+	CheckCollisonForHammer()
+	
+	if (objA0.value26 == 0)
+	{
+		objA0.value26 = 1
+		u32 A1backup = A1
+		if (allocDynamicObjectStd())
+		{
+			objA1.update_address = 0x212260
+			objA1.render_flags = (render_flag.WORLD | render_flag.VISIBLE)
+			objA1.sprite_priority = 0x200
+			objA1.sprite_attributes = objA0.sprite_attributes
+			objA1.position.y = objA0.position.y
+			objA1.position.x = objA0.position.x
+			objA1.value39 = 0
+		}
+		A1 = A1backup
+	}
+	
+	MoveWithGravity20()
+	DrawObject()
+}
+
+//not good collision detection, but it's is the same as what the characters use??? what's the hold up!?
+global u32 A0Hammer
+global u32 A0Hammer2
+global u32 A0Hammer3
+global u32 A0Hammer4
+global u32 A0Hammer5
+global u8 nextHammer
+
+function void CheckCollisonForHammerGlobal()
+{
+	u16 numObjects = u16[0xffffe380]
+	A4 = 0xffffe380 + 2
+	while (numObjects != 0)
+	{
+		// Get address of dynamic object
+		A1 = 0xffff0000 + u16[A4]
+		A4 += 2
+
+		// Offset into a list of hitbox sizes
+		u16 offset = objA1.collision_attributes
+		if (offset != 0)
+		{
+			A2 = 0x00ff62 + (offset & collision_attributes.size) * 2
+			s16 hitbox.x = u8[A2]
+			s16 hitbox.y = u8[A2+1]
+
+			u16 px = objA1.position.x.u16 - hitbox.x
+			u16 py = objA1.position.y.u16 - hitbox.y
+			u16 sx = hitbox.x * 2
+			u16 sy = hitbox.y * 2
+			
+			u16 D5c = objA0.hitbox_extends.y - 3
+			u16 D2c = objA0.position.x.u16 - 8
+			u16 D3c = objA0.position.y.u16 - D5c
+			u16 D4c = 16
+			D5c *= 2
+			if (checkBoxOverlap(D2c, D3c, D4c, D5c, px, py, sx, sy))
+			{
+				// Collision found
+				OnCollision()
+				return
+			}
+		}
+
+		numObjects -= 2
+	}
+}
+function void CheckCollisonForHammer()
+{
+	u16 numObjects = global.dynamic_objects.size	// Actually it's twice the number of dynamic objects
+	A4 = 0xffffe380 + 2
+	while (numObjects != 0)
+	{
+		// Get address of dynamic object
+		A1 = 0xffff0000 + u16[A4]
+		A4 += 2
+
+		// Offset into a list of hitbox sizes
+		u16 offset = objA1.collision_attributes
+		if (offset != 0)
+		{
+			A2 = 0x00ff62 + (offset & collision_attributes.size) * 2
+			s16 hitbox.x = u8[A2]
+			s16 hitbox.y = u8[A2+1]
+
+			u16 px = objA1.position.x.u16 - hitbox.x
+			u16 py = objA1.position.y.u16 - hitbox.y
+			u16 sx = hitbox.x * 2
+			u16 sy = hitbox.y * 2
+			
+			u16 D5c = objA0.hitbox_extends.y - 3
+			u16 D2c = objA0.position.x.u16 - 8
+			u16 D3c = objA0.position.y.u16 - D5c
+			u16 D4c = 16
+			D5c *= 2
+			if (checkBoxOverlap(D2c, D3c, D4c, D5c, px, py, sx, sy))
+			{
+				// Collision found
+				OnCollision()
+				return
+			}
+		}
+
+		numObjects -= 2
+	}
+}
+
+//what to do if collison with object is found
+function void OnCollision()
+{
+	D1.u8 = (objA1.collision_attributes & collision_attributes.flags)
+	if (D1.u8 == 0)
+	{
+		if (u8[A1 + 0x29] != 0)
+		{
+			u32 A0backup2 = A0
+			A0 = 0xffffb000
+			
+			u8[A1 + 0x1c] = A0.u8
+			u8[A1 + 0x25] = u8[A1 + 0x28]
+			u8[A1 + 0x28] = 0
+			--u8[A1 + 0x29]
+			if (u8[A1 + 0x29] == 0)
+			{
+				u8[A1 + 0x2a] |= 0x80
+			}
+			
+			A0 = A0backup2
+			
+		}
+		else
+		{
+			if (u8[A1 + 0x2a] & 0x04)
+			{
+				A2 = 0xffff0000 + u16[A1 + 0x3c]
+				u8[A2] &= ~(1 << u8[A1 + 0x3b])
+			}
+
+			u8[A1 + 0x2a] |= 0x80
+
+			// Grant bonus points
+			Enemy.addScore(A1, 0x010216)
+
+			objA1.update_address = 0x01e5e0
+			u8[A1 + 0x05] = 0
+		}
+	}
+	else if (D1.u8 == collision.flag.ITEM)
+	{
+		D0.u8 = (objA1.collision_attributes & collision_attributes.size)
+		if (D0.u8 == collision.size.16x16)
+		{
+			u32 A0backup2 = A0
+			A0 = 0xffffb000
+			
+			objA1.base_state = 0x04		// Set monitor state to broken
+			objA1.monitor.character_address = A0.u16		// RAM address of character
+
+			A0 = A0backup2
+			
+		}
+	}
+	else
+	{
+		u8 var = (objA1.collision_attributes & collision_attributes.size)
+		if (var == collision.size.16x16 || var == collision.size.6x6 || var == collision.size.16x8 || var == collision.size.4x4_2 || (var >= collision.size.128x32 && var <= collision.size.4x4_2) || var == collision.size.24x24_2)
+		{
+			if (objA1.update_address == 0x08dafc || (global.zone == 0x01 && (objA1.update_address == 0x0878ce || objA1.update_address == 0x087f5c || objA1.update_address == 0x08792e)) || (global.zone == 0x03 && (objA1.update_address == 0x031754)) || (global.zone == 0x06 && (objA1.update_address == 0x025cf0)))
+			{
+				++u8[A1 + 0x29]
+				if (objA1.update_address == 0x087f5c || objA1.update_address == 0x031754 || objA1.update_address == 0x08dafc || objA1.update_address == 0x08792e || objA1.update_address == 0x025cf0)
+					++u8[A1 + 0x3b]
+			}
+		}
+	}
+}
+
+function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
+{
+    if (hammer.anim >= 8)
+        hammer.anim = 0
+
+	u8 gameMode = global.game_mode & 0x7f
+	bool prioFlag = (objA0.sprite_attributes & 0x8000) != 0
+	u8 flags = ((objA0.render_flags & 0x01) ? SPRITE_FLAG_FLIP_X : 0) | ((objA0.render_flags & 0x02) ? SPRITE_FLAG_FLIP_Y : 0) | ((objA0.sprite_attributes & 0x8000) ? SPRITE_FLAG_PRIO : 0)
+
+		if (objA0.update_address == 0x212250) && (global.xtrachar == 3)
+		{
+			Renderer.drawCustomSprite(stringformat("character_slot3_hammer_%d", hammer.anim), px, py, 0x00, flags, renderQueue)
+			return true
+		}
+    return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+}

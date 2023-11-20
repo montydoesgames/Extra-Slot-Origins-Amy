@@ -1,0 +1,190 @@
+#if ACHIEVEMENTS_PLUS_ACTIVE
+
+define u16 ORIGINSAMY_ACHIEVEMENT_GAMEWIN	= 200
+define u16 ORIGINSAMY_ACHIEVEMENT_SUPER = 201
+define u16 ORIGINSAMY_ACHIEVEMENT_HYPER = 202
+define u16 ORIGINSAMY_ACHIEVEMENT_DOUBLEAMY  = 206
+define u16 ORIGINSAMY_ACHIEVEMENT_ORIGINSPARAANDROID = 203
+define u16 ORIGINSAMY_ACHIEVEMENT_JUSTAMY   = 204
+define u16 ORIGINSAMY_ACHIEVEMENT_MODCONFLICT  = 205
+
+constant array<string> ORIGINSAMY_GET_ACHIEVEMENTS_TITLE =
+{
+	// The array specifies the names of the achievements.
+	"Amy Rose was here",
+	"For the first time in forever",
+	"Hyperactive throwing arm",
+}
+constant array<string> ORIGINSAMY_GET_ACHIEVEMENTS_DESCRIPTION =
+{
+	// The array defines a description of the achievements.
+	"Beat the game as Amy Rose.",
+	"Collect all of the Chaos Emeralds and tranform into Super Amy.",
+	"Collect all of the Super Emeralds, transform into Hyper Amy and throw a hammer.",
+}
+
+constant array<string> ORIGINSAMY_GET_ACHIEVEMENTS_SUBTITLE =
+{
+	// The array defines a description of the achievements.
+	"The Rose is back!",
+	"Where are my Chaos Emeralds?",
+	"Watch where you're swinging!",
+}
+
+constant array<string> ORIGINSAMY_GET_ACHIEVEMENTS_STARS =
+{
+	// The array determines the difficulty of reaching 5 stars.
+	// - "00000" = 0 Stars
+	// - "10000" = 1 Star
+	// - ...
+	// - "11111" = 5 Stars
+	
+	// It also depends on how many Coins you will receive upon completion of the achievement.
+	// - (0 Stars = 2 Coins)
+	// - (1 Stars = 4 Coins)
+	// - ...
+	// - (5 Stars = 20 Coins)
+	
+	// It is not necessary to use 0, the main thing is to use 1 to let script know that it is a star.
+	// "" =  0 Stars
+	// "1" = 1 Stars
+	// - ...
+	// "11111" = 5 Stars
+	
+	"00000",
+	"11000",
+	"11110",
+}
+
+function string AchievementsPlus.AchivementsManager.getAchievementDetail(u16 achievementID, u8 parse)
+{
+	// Parse:
+	// - 0x00 - Achievement title
+	// - 0x01 - Achievement stars
+	// - 0x02 - Achievement sub-title
+	// - 0x03 - Achievement description
+	// - 0x04 - Achievement icon
+	
+	// Specify in the >= your start ID, and in the <= the end ID, which also goes in order. 
+	// - Also, you can use the defines themselves, perhaps this can be convenient for someone.
+	// - if (achievementID >= ORIGINSAMY_ACHIEVEMENT_GET_10_RINGS && achievementID <= ORIGINSAMY_ACHIEVEMENT_AIZ_BIG_RING)
+	
+	if (achievementID >= 200 && achievementID <= 202)
+	{
+		// We have to reset the input value here and in the rest of the arrays below the start ID, otherwise array will just get anything back.
+		u16 tempValue0 = achievementID - 200
+		
+		if (parse == 0x00)
+			return ORIGINSAMY_GET_ACHIEVEMENTS_TITLE[tempValue0]
+		else if (parse == 0x01)
+			return ORIGINSAMY_GET_ACHIEVEMENTS_STARS[tempValue0]
+		// Array can also be used here if you want different sub-titles for your achievements.
+		else if (parse == 0x02)
+			return ORIGINSAMY_GET_ACHIEVEMENTS_SUBTITLE[tempValue0]
+		else if (parse == 0x03)
+			return ORIGINSAMY_GET_ACHIEVEMENTS_DESCRIPTION[tempValue0]
+		// Achievements Plus has a "menu_thumb_detailPanel_community" icon, you can use it, but you can also make your own. You can also use array here to have different icons for each of your achievements.
+		else if (parse == 0x04)
+			return "menu_thumb_detailPanel_esoriginsamy"
+	}
+	else if (achievementID == 206)
+	{
+		// Define the value of the Achievement 
+		u32 tempValue1 = u32[0x851304 + (achievementID * 0x04)]
+		// Define if the achievement is complete
+		bool tempValue2 = tempValue1 == (tempValue1 | 0xa00000)
+		
+		if (parse == 0x00)
+			return "Double Trouble"
+
+		else if (parse == 0x01)
+			return "111000"
+		else if (parse == 0x02)
+			return "Twice the bonking!"
+		else if (parse == 0x03)
+			return "Play with the Partner option on and Legacy Amy active."
+		else if (parse == 0x04)
+			return "menu_thumb_detailPanel_esoriginsamy"
+	}
+	else if (achievementID == ORIGINSAMY_ACHIEVEMENT_ORIGINSPARAANDROID)
+	{
+		// Define the value of the Achievement 
+		u32 tempValue1 = u32[0x851304 + (achievementID * 0x04)]
+		// Define if the achievement is complete
+		bool tempValue2 = tempValue1 == (tempValue1 | 0xa00000)
+		
+		if (parse == 0x00)
+			return tempValue2 ? "3 A.I.R. Plus" : "@Secret" // "@Hidden" or "@Secret" will not appear in the menu, but can still be completed
+		else if (parse == 0x01)
+			return "111000"
+		else if (parse == 0x02)
+			return "Sonic Origins Plus para android"
+		else if (parse == 0x03)
+			return "Have Origins Parity Galore, Blue Glasses Eggman, Origins Amy and Achievements+ enabled at the same time."
+		else if (parse == 0x04)
+			return "menu_thumb_detailPanel_esoriginsamy"
+	}
+	else if (achievementID == ORIGINSAMY_ACHIEVEMENT_JUSTAMY)
+	{
+		// Define the value of the Achievement 
+		u32 tempValue1 = u32[0x851304 + (achievementID * 0x04)]
+		// Define if the achievement is complete
+		bool tempValue2 = tempValue1 == (tempValue1 | 0xa00000)
+		
+		if (parse == 0x00)
+			return tempValue2 ? "Just Amy." : "@Secret" // "@Hidden" or "@Secret" will not appear in the menu, but can still be completed
+		else if (parse == 0x01)
+			return "11111"
+		else if (parse == 0x02)
+			return "Just Amy."
+		else if (parse == 0x03)
+			return "Just Amy."
+		else if (parse == 0x04)
+			return "menu_thumb_detailPanel_esoriginsamyjust"
+	}
+	else if (achievementID == ORIGINSAMY_ACHIEVEMENT_MODCONFLICT)
+	{
+		// Define the value of the Achievement 
+		u32 tempValue1 = u32[0x851304 + (achievementID * 0x04)]
+		// Define if the achievement is complete
+		bool tempValue2 = tempValue1 == (tempValue1 | 0xa00000)
+		
+		if (parse == 0x00)
+			return tempValue2 ? "Confronting Yourself" : "@Secret" // "@Hidden" or "@Secret" will not appear in the menu, but can still be completed
+		else if (parse == 0x01)
+			return "10000"
+		else if (parse == 0x02)
+			return "This game ain't big enough."
+		else if (parse == 0x03)
+			return "Be sent to the Mod Conflict screen by enabling Extra Slot Project's Amy."
+		else if (parse == 0x04)
+			return "menu_thumb_detailPanel_esoriginsamy"
+	}
+	// Return the base function
+	return base.AchievementsPlus.AchivementsManager.getAchievementDetail(achievementID, parse)
+}
+
+//# address-hook(0x05b1a2) end(0x05b1e6)
+function void fn05b1a2()
+{
+    if (global.xtrachar == 3)
+    {
+        AchievementsPlus.AchivementsManager.setAchievementComplete(ORIGINSAMY_ACHIEVEMENT_GAMEWIN)
+        if (OriginsAmyPalette == 0x05)
+            AchievementsPlus.AchivementsManager.setAchievementComplete(ORIGINSAMY_ACHIEVEMENT_JUSTAMY)
+    }
+base.fn05b1a2()
+}
+
+//# address-hook(0x010afa) end(0x010bb8)
+function void Character.Initialization.Sonic()
+{
+    if Mods.isModActive("Origins Parity Galore") && Mods.isModActive("Blue Glasses Eggman") && (global.xtrachar == 3)
+    	AchievementsPlus.AchivementsManager.setAchievementComplete(ORIGINSAMY_ACHIEVEMENT_ORIGINSPARAANDROID)
+    if Mods.isModActive("Amy Rose") && OriginsAmy.Partner && (global.xtrachar == 3)
+    	AchievementsPlus.AchivementsManager.setAchievementComplete(ORIGINSAMY_ACHIEVEMENT_DOUBLEAMY)
+
+base.Character.Initialization.Sonic()
+}
+
+#endif

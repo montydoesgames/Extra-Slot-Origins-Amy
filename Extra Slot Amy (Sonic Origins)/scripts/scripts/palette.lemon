@@ -1,0 +1,72 @@
+global u8 OriginsAmyPalette
+global u8 OriginsAmyColourLimit
+
+function string getExtraCharacterPaletteKey(u8 xtrachar)
+{
+    if (xtrachar == 3)
+    {
+        if !(OriginsAmyColourLimit)
+        {
+            if !(OriginsAmyPalette)
+                return "character_originsamy_default"
+            else if (OriginsAmyPalette == 0x01)
+                return "character_originsamy_s1s2"
+            else if (OriginsAmyPalette == 0x02)
+                return "character_originsamy_modern"
+            else if (OriginsAmyPalette == 0x03)
+                return "character_originsamy_chaotix"
+            else if (OriginsAmyPalette == 0x04)
+                return "character_originsamy_sailormoon"
+            else if (OriginsAmyPalette == 0x05)
+                return "character_originsamy_doki"
+            else if (OriginsAmyPalette == 0x06)
+                return "character_originsamy_esa"
+        }
+        else
+        {
+            if !(OriginsAmyPalette)
+                return "character_originsamy_default_16"
+            else if (OriginsAmyPalette == 0x01)
+                return "character_originsamy_s1s2_16"
+            else if (OriginsAmyPalette == 0x02)
+                return "character_originsamy_modern_16"
+            else if (OriginsAmyPalette == 0x03)
+                return "character_originsamy_chaotix_16"
+            else if (OriginsAmyPalette == 0x04)
+                return "character_originsamy_sailormoon_16"
+            else if (OriginsAmyPalette == 0x05)
+                return "character_originsamy_doki_16"
+            else if (OriginsAmyPalette == 0x06)
+                return "character_originsamy_esa_16"
+        }
+    }
+return base.getExtraCharacterPaletteKey(xtrachar)
+}
+
+function u64 getCharacterEndPosePaletteKey(u8 character)
+{
+    if (character == CHARACTER_SONIC) && (u8[0xffffe654] == 3)
+        return getExtraCharacterPaletteKey(3)
+return base.getCharacterEndPosePaletteKey(character)
+}
+
+function u8 getModdedEndPosePaletteLine(u8 character, bool isHyperEffect)
+{
+    if (global.xtrachar == 3)
+	return 5
+
+return base.getModdedEndPosePaletteLine(character, isHyperEffect)
+}
+
+//Technically counts
+#if EXTRA_SAVE_SLOTS_ACTIVE
+
+function s32 ESS_saveBoxGetColor_Es(u8 ES_val)
+{
+    if (ES_val == 3)
+    return 0x2424fc
+    else
+    return base.ESS_saveBoxGetColor_Es(ES_val)
+}
+
+#endif
