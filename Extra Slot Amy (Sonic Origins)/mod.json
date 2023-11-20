@@ -1,0 +1,83 @@
+{
+	"Metadata":
+	{
+		"Name": "Extra Slot Amy (Sonic Origins)",
+		"Author": "montydoesgames",
+		"Description": "Have no fear, Amy Rose is here! Play through Sonic 3 A.I.R. as Amy from Sonic Origins, with an accurately ported moveset, and some cool options!\n\nCredits to funniman for the thrown Hammer object code!",
+		"ModVersion": "1.0.1 Pre-Release",
+		"GameVersion" : "23.10.07.0",
+	},
+	"Settings":
+	{
+		"AccurateOriginsAmy":
+		[
+			{
+				"InternalName": "ORIGINSAMYPALETTE",
+				"DisplayName": "Palette",
+				"Category": "Visuals and Audio",
+				"Variable": "OriginsAmyPalette",
+				"DefaultValue": "0",
+				"Options":
+				{
+					"0x00": "CD/3&K (Default)",
+					"0x01": "S1/2",
+					"0x02": "Modern",
+					"0x03": "Chaotix",
+					"0x04": "Chibi Rose",
+					"0x05": "Just Amy.",
+					"0x06": "Full Circle"
+				}
+			},
+			{
+				"InternalName": "ORIGINSAMYCOLOURLIMIT",
+				"DisplayName": "16-colour limit",
+				"Category": "Visuals and Audio",
+				"Variable": "OriginsAmyColourLimit",
+				"DefaultValue": "0x00",
+				"Options":
+				{
+					"0x00": "Off",
+					"0x01": "On",
+				}
+			},
+			{
+				"InternalName": "ORIGINSAMYHEARING",
+				"DisplayName": "SFX Type",
+				"Category": "Visuals and Audio",
+				"Variable": "OriginsAmySFX",
+				"DefaultValue": "0x00",
+				"Options":
+				{
+					"0x00": "Sonic Origins",
+					"0x01": "Sonic 3",
+				}
+			},
+			{
+				"InternalName": "ORIGINSAMYHAMMERTHROW",
+				"DisplayName": "Hammer Throw",
+				"Category": "Gameplay",
+				"Variable": "OriginsAmy.ThrowButton",
+				"DefaultValue": "0x09",
+				"Options":
+				{
+					"0x09": "Y (Overrides Super Cancel)",
+					"0x05": "C",
+					"0x06": "A",
+					"0x04": "B"
+				}
+			},
+			{
+				"InternalName": "ORIGINSAMYTOGETHERMODE",
+				"DisplayName": "Partner character",
+				"Category": "Gameplay",
+				"Variable": "OriginsAmy.Partner",
+				"DefaultValue": "0x00",
+				"Options":
+				{
+					"0x00": "Off",
+					"0x01": "On",
+				}
+			}
+    	]
+	}
+}
