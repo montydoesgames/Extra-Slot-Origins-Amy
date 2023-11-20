@@ -1,0 +1,22 @@
+#if EXTRA_CHARACTERS_ACTIVE
+
+#if EXTRA_CHARACTERS_UNLIMITED
+
+include scripts/?
+
+//error detection
+
+function bool ESU.ModConflicts()
+{
+    if Mods.isModActive("Extra Slot Amy") || Mods.isModActive("Extra Slot Amy SHC")
+    {
+        AchievementsPlus.AchivementsManager.setAchievementComplete(ORIGINSAMY_ACHIEVEMENT_MODCONFLICT)
+        return true
+    }
+
+return base.ESU.ModConflicts()
+}
+
+#endif
+
+#endif
