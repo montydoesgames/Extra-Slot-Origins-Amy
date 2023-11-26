@@ -4,8 +4,19 @@
 		"Name": "Extra Slot Amy (Sonic Origins)",
 		"Author": "montydoesgames",
 		"Description": "Have no fear, Amy Rose is here! Play through Sonic 3 A.I.R. as Amy from Sonic Origins, with an accurately ported moveset, and some cool options!\n\nCredits to funniman for the thrown Hammer object code!",
-		"ModVersion": "1.0.1 Pre-Release",
-		"GameVersion" : "23.10.07.0",
+		"ModVersion": "1.0.1 Pre-Release 2",
+		"GameVersion": "23.10.07.0",
+		"UniqueID": "EXTRASLOTORIGINSAMY",
+	},
+	"OtherMods":
+	{
+	    "extra-character-slots-unlimited":
+	    {
+	        "DisplayName": "Extra Character Slots - Unlimited",
+	        "IsRequired": "1",
+	        "Priority": "Lower"
+	    }
+
 	},
 	"Settings":
 	{
