@@ -1,0 +1,1536 @@
+//Custom state defines
+constant u8 char.state.ORIGINSAMY_HAMMERJUMP = 0x48
+constant u8 char.state.ORIGINSAMY_HAMMERRUSH = 0x49
+
+//Global defines used everywhere
+global u8 OriginsAmyCharge
+global bool HammerRushing
+global u8 HammerRushTimer
+global u8 OriginsAmy.coolDown
+global u8 hammer.anim
+global u8 OriginsAmy.ThrowButton
+global u8 OriginsAmy.Partner
+global bool ThrowingAnim
+global u8 OriginsAmy.JumpStyle = 1
+
+function void ExtraChar.startup_char3()
+{
+	global.characters = (OriginsAmy.Partner) ? CHARS_SONIC_AND_TAILS : CHARS_SONIC_ALONE
+}
+
+//@ Original function taken from sonic3air_dev/scripts/maingame/hud/hud.lemon
+function bool ExtraChar.renderHUD_char3()
+{
+	// Make the normal HUD show up
+	return false
+}
+
+//@ Original function taken from sonic3air_dev/scripts/objects/basics/monitor.lemon
+function u64 ExtraChar.getIconSpriteKey_char3(u8 type)
+{
+	u64 ESchar_monitor = stringformat("monitor_icon_slot%d", global.xtrachar)
+	u64 REGchar_monitor = (getMainCharacter() == CHARACTER_SONIC) ? "monitor_icon_sonic" : (getMainCharacter() == CHARACTER_TAILS) ? "monitor_icon_tails" : "monitor_icon_knuckles"
+	u64 ESspeed_shoes = stringformat("monitor_icon_slot%d_speedshoes", global.xtrachar)
+	
+	if (type == 0x00)
+		return "monitor_icon_static"
+	else if (type == 0x01)
+		return Renderer.hasCustomSprite(ESchar_monitor) ? ESchar_monitor : REGchar_monitor
+	else if (type == 0x02)
+		return "monitor_icon_robotnik"
+	else if (type == 0x03)
+		return "monitor_icon_ring"
+	else if (type == 0x04)
+		return Renderer.hasCustomSprite(ESspeed_shoes) ? ESspeed_shoes : "monitor_icon_speedshoes"
+	else if (type == 0x05)
+		return "monitor_icon_fireshield"
+	else if (type == 0x06)
+		return "monitor_icon_lightningshield"
+	else if (type == 0x07)
+		return "monitor_icon_bubbleshield"
+	else if (type == 0x08)
+		return "monitor_icon_invincibility"
+	else if (type == 0x09)
+		return "monitor_icon_super"
+	else if (type == 0x0b)
+		return "monitor_icon_classicshield"
+
+	return 0x00
+}
+
+//@ Original function taken from sonic3air_dev/scripts/standalone/rendering/render_character.lemon
+function void ExtraChar.drawCharacterSprite_char3()
+{
+	u64 key = pop()
+	bool asSmallGhost = pop()
+	s16 py = s16(pop())
+	s16 px = s16(pop())
+	u8 variant = pop()
+	u8 character = pop()
+	
+	bool isPlayer1 = (variant == 0)
+	u32 characterAddress = isPlayer1 ? 0xffffb000 : 0xffffb04a
+
+	// Check only needed for Tails' tails
+	if (variant == 2)
+	{
+		// No smooth rotation in Slot Machine
+		if (global.zone == 0x15)
+		{
+			push(false)
+			return
+		}
+		
+		characterAddress = 0xffff0000 + u16[A0 + 0x30]
+
+		// Do not render when blinking after hit
+		if (u8[characterAddress + 0x34] != 0 && ((u8[characterAddress + 0x34] + 1) & 0x04) == 0)
+		{
+			// Prevent emulator-like rendering
+			push(true)
+			return
+		}
+
+		// Do not render when Tails looks into the background (e.g. LBZ 2 end cutscene) and in DEZ gravity transporters
+		if (u8[characterAddress + 0x22] >= 0x55 && u8[characterAddress + 0x22] <= 0x5b)
+		{
+			// Prevent emulator-like rendering
+			push(true)
+			return
+		}
+
+		isPlayer1 = (characterAddress == 0xffffb000)
+		character = CHARACTER_TAILS
+	}
+
+	if (level.vertical_wrap == 0xff00)
+	{
+		// For vertically wrapping levels, "normalize" py into interval [-move_area.bottom.target * 3/4, -move_area.bottom.target * 1/4]
+		py &= level.height.bitmask
+		if (py > move_area.bottom.target * 3/4 && move_area.bottom.target >= 0xe0)	// move_area.bottom.target is very low in DEZ boss act
+			py -= move_area.bottom.target
+	}
+
+	u8 animationSprite = char.animation.sprite
+	u16 animationSpriteEx = Standalone.getModdedAnimationSpriteEx(character, animationSprite)
+	u8 flags = (char.render_flags & (SPRITE_FLAG_FLIP_X | SPRITE_FLAG_FLIP_Y))
+	u8 angle = 0
+	key = Standalone.getModdedAnimationSpriteKey(character, animationSpriteEx)		// First ask modded scripts
+	u8 rotationMode = 0
+
+	if (variant < 2)
+	{
+		if (character == CHARACTER_SONIC && animationSpriteEx == animationSprite)	// Last check is only false if modded scripts made their own changes
+		{
+			// Special handling for Super Peel-Out
+			if (animationSprite >= 0x21 && animationSprite <= 0x30)
+			{
+				if (sonic.fastrunanim.timer > 0)
+				{
+					animationSpriteEx = CHAR_ANIMSPRITE_SONIC_PEELOUT + (level.framecounter & 0x03)
+
+					if (!Game.getSetting(SETTING_SMOOTH_ROTATION))
+					{
+						angle = (animationSprite - 0x21) / 4 * 0xe0
+						if ((char.flags & char.flag.FACING_LEFT) == (global.inv_gravity == 0))
+							angle = -angle
+						animationSprite = 0x21 + (animationSprite - 0x21) % 4
+					}
+				}
+			}
+		}
+
+		if !(Game.getSetting(SETTING_SMOOTH_ROTATION))
+		{
+			// Character
+			if (animationSprite >= 0x01 && animationSprite <= 0x20)
+			{
+				// Walking animation
+				angle = (animationSprite - 0x01) / 8 * 0xe0
+				if ((char.flags & char.flag.FACING_LEFT) == (global.inv_gravity == 0))
+					angle = -angle
+				animationSprite = 0x01 + (animationSprite - 0x01) % 8
+			}
+			else if (animationSprite >= 0x21 && animationSprite <= 0x30)
+			{
+				// Running animation
+		        angle = (animationSprite - 0x21) / 4 * 0xe0
+				if ((char.flags & char.flag.FACING_LEFT) == (global.inv_gravity == 0))
+					angle = -angle
+				animationSprite = 0x21 + (animationSprite - 0x21) % 4
+			}
+			else if (animationSprite >= 0x78 && animationSprite <= 0x7f)
+			{
+				// Swinging animation
+			    angle = (animationSprite - 0x21) / 8 * 0xe0
+				if ((char.flags & char.flag.FACING_LEFT) == (global.inv_gravity == 0))
+					angle = -angle
+				animationSprite = 0x78 + (animationSprite - 0x78) % 8
+			}
+		}
+		else if (Game.getSetting(SETTING_SMOOTH_ROTATION))
+		{
+			// Character
+			if (animationSprite >= 0x01 && animationSprite <= 0x20)
+			{
+				// Walking animation
+				animationSprite = 0x01 + (animationSprite - 0x01) % 8
+				rotationMode = 1
+			}
+			else if (animationSprite >= 0x21 && animationSprite <= 0x30)
+			{
+				// Running animation
+				animationSprite = 0x21 + (animationSprite - 0x21) % 4
+				rotationMode = 1
+			}
+			else if (animationSprite >= 0x78 && animationSprite <= 0x7f)
+			{
+				// Swinging animation
+				animationSprite = 0x78
+				rotationMode = 2
+			}
+			else if (character == CHARACTER_TAILS && animationSprite >= 0xc3 && animationSprite <= 0xca)
+			{
+				// Tails' fastest run animation
+				animationSprite = 0xc3 + (animationSprite - 0xc3) % 2
+				rotationMode = 1
+			}
+			else if (character == CHARACTER_KNUCKLES && animationSprite == 0xc0)
+			{
+				// Only for DDZ
+				rotationMode = 1
+			}
+
+			if (rotationMode != 0)
+			{
+			#if GAMEAPP >= 0x23032500
+				bool useVanillaS3AIRRotation = true
+				if (Game.getSetting(SETTING_SMOOTH_ROTATION) == 2)
+				{
+					useVanillaS3AIRRotation = (char.flags & char.flag.IN_AIR || global.zone == 0x0c)	// Use in-air rotation in DDZ
+				}
+
+				if (useVanillaS3AIRRotation)
+			#endif
+				{
+					s8 oldRotation = isPlayer1 ? oldRotationPlayer1 : oldRotationPlayer2
+					flags = char.flags & char.flag.FACING_LEFT		// This really has to be "char.flags", not "char.render_flags"
+
+					angle = char.rotation
+					if (rotationMode == 1)
+					{
+						if (abs(s8(char.rotation)) <= 0x10 && abs(oldRotation) <= 0x10)
+						{
+							angle = 0
+						}
+
+						if (angle != char.rotation)
+						{
+							s8 diff = angle - oldRotation
+							angle = oldRotation + clamp(diff, -3, 3)
+						}
+					}	
+				}
+			#if GAMEAPP >= 0x23032500
+				else
+				{
+					// Mania-accurate rotation #contributed by Elsie The Pict
+					u8 oldRotation = isPlayer1 ? oldRotationPlayer1 : oldRotationPlayer2
+					flags = char.flags & char.flag.FACING_LEFT		// This really has to be "char.flags", not "char.render_flags"
+
+					angle = char.rotation
+					if (rotationMode == 1)
+					{
+						
+						if (char.rotation <= 0x04 || char.rotation >= 0xfc)
+							oldRotation = 0
+						else
+						{
+							u32 targetRotation = 0
+							if (char.rotation > 0x10 && char.rotation < 0xe8)
+								targetRotation = char.rotation
+								
+							u32 rotate = targetRotation - oldRotation
+							u32 shift = (abs(char.groundspeed) <= 0x6000) + 1
+							
+							if (abs(rotate) >= abs(rotate - 0x100))
+							{
+								if (abs(rotate - 0x3) < abs(rotate + 0x100))
+									oldRotation += (rotate - 0x100) >> shift
+								else
+									oldRotation += (rotate + 0x100) >> shift
+							}
+							else
+							{
+								if (abs(rotate) < abs(rotate + 0x100))
+									oldRotation += rotate >> shift
+								else
+									oldRotation += (rotate + 0x100) >> shift
+							}
+						}
+						
+						angle = oldRotation
+						angle &= 0xFF
+					}
+				}
+			#endif
+			}
+
+			if (isPlayer1)
+				oldRotationPlayer1 = angle
+			else
+				oldRotationPlayer2 = angle
+		}
+
+		if (key == 0)
+		{
+			// Special handling for Drop Dash & Super Peel-Out
+			if (animationSpriteEx >= CHAR_ANIMSPRITE_SONIC_PEELOUT) && (animationSpriteEx >= 0x100)
+			{
+				key = stringformat("character_slot%d_peelout_%d", global.xtrachar, animationSpriteEx - CHAR_ANIMSPRITE_SONIC_PEELOUT)
+			}
+		}
+		if (isPlayer1)
+			timeattack.animSpriteEx = animationSpriteEx
+
+		if (key == 0)
+		{
+			key = stringformat("character_slot3_0x%02x", animationSprite)
+
+			if (!Renderer.hasCustomSprite(key))
+			{
+				u32 sourceBase    = (character == CHARACTER_SONIC) ? ((animationSprite >= 0xda) ? 0x140060 : 0x100000) : (character == CHARACTER_TAILS) ? ((animationSprite >= 0xd1) ? 0x143d00 : 0x33e0) : 0x13e0
+				u32 tableAddress  = (character == CHARACTER_SONIC) ? 0x148182 : (character == CHARACTER_TAILS) ? 0x14a08a : 0x14bd0a
+				u32 mappingOffset = (character == CHARACTER_SONIC) ? 0x146620 : (character == CHARACTER_TAILS) ? 0x148eb8 : 0x14a8d6		// Not really necessary here, we could also use "char.mapping_offset"
+
+				key = Renderer.setupCustomCharacterSprite(sourceBase, tableAddress, mappingOffset, animationSprite, 0x00)
+			}
+		}
+    if ((char.state == char.state.ORIGINSAMY_HAMMERJUMP) || ((char.state == char.state.ORIGINSAMY_HAMMERRUSH) && !(Game.getSetting(SETTING_SMOOTH_ROTATION)))) && (character == CHARACTER_SONIC)
+	    angle = 0
+
+	}
+	else
+	{
+		if (Game.getSetting(SETTING_SMOOTH_ROTATION))
+		{
+			// Tails' tails
+			if (animationSprite >= 0x05 && animationSprite <= 0x14)
+			{
+				animationSprite = 0x05 + (animationSprite - 0x05) % 4
+				angle = lookupAngleByVector(s16[characterAddress + 0x18], s16[characterAddress + 0x1a])
+
+				flags = 0
+				if (char.flags & char.flag.FACING_LEFT)
+				{
+					flags |= SPRITE_FLAG_FLIP_X
+					angle += 0x80
+				}
+				if (global.inv_gravity)
+				{
+					flags ^= SPRITE_FLAG_FLIP_Y
+					angle = -angle
+				}
+			}
+		}
+
+		key = stringformat(stringformat("%s_tails_0x%02x", getCharacterSpriteKey(CHARACTER_TAILS)), animationSprite)
+		if (!Renderer.hasCustomSprite(key))
+		{
+			key = Renderer.setupCustomCharacterSprite(0x336620, 0x344d74, 0x344bb8, animationSprite, 0x00)
+		}
+	}
+
+	u16 renderQueue = 0xa000 - char.sprite_priority
+	u8 atex = (char.sprite_attributes >> 9) & 0x30
+	if (EXTENDED_CHARACTER_PALETTES)
+		atex = 0x40 + character * 0x20
+
+	if (char.sprite_attributes & sprite_attribute.PRIORITY)
+		flags |= SPRITE_FLAG_PRIO
+
+	if (rotationMode != 0 && global.inv_gravity)
+	{
+		// Correction for inverse gravity
+		angle = 128 - angle
+		flags ^= SPRITE_FLAG_FLIP_X
+	}
+	
+	// Render character
+	if (asSmallGhost)
+	{
+		Renderer.drawSpriteTinted(key, px, py, atex, flags | SPRITE_FLAG_PRIO, 0xa800, angle, 0xc0ffffff, 0x8000)
+	}
+	else
+	{
+		Renderer.drawSprite(key, px, py, atex, flags, renderQueue, angle, 255)
+	}
+
+	bool useAfterImages
+	if (isPlayer1)
+	{
+		if ((super.active == 0xff) || (super.active.tails == 0xff))
+		{
+			useAfterImages = true
+		}
+		else
+		{
+			if (Game.getSetting(SETTING_SPEEDUP_AFTERIMGS))
+			{
+				useAfterImages = ((u8[characterAddress + 0x2b] & char.bonus.SPEED_UP) != 0)
+			}
+		}
+	}
+
+	if (useAfterImages)
+	{
+		// Additional offset for Sonic charging a Super Peel-Out (either Hyper Sonic or with Speed Shoes)
+		s16 afterImagesOffsetX = 0
+		if (char.character == CHARACTER_SONIC && char.spindash == 0x80)
+		{
+			afterImagesOffsetX = (char.groundspeed >> 7) * ((char.flags & char.flag.FACING_LEFT) ? 1 : -1)
+		}
+
+		for (s8 i = 3; i > 0; --i)
+		{
+			A1 = 0xffffe500 + u8(posbackup.offset.player1 - (i * 8 + 4))
+			s16 px0 = u16[A1] - camera.foreground.x.u16 + (i * afterImagesOffsetX / 4)
+			s16 py0 = u16[A1+2] - camera.foreground.y.u16
+			if (level.vertical_wrap == 0xff00)	// Consider vertical level wrap
+				py0 &= level.height.bitmask
+			
+			Renderer.drawSprite(key, px0, py0, atex, flags, renderQueue - i, angle, 192 - i * 32)
+		}
+	}
+
+	// Prevent emulator-like rendering
+	push(true)
+	return
+}
+
+//@ Original function taken from sonic3air_dev/scripts/maingame/character/character.lemon
+function void ExtraChar.pressedJumpInMidAir_char3()
+{
+if (char.character == CHARACTER_SONIC)
+{
+Audio.playAudio("OriginsAmy_HammerSpin", AudioContext.CONTEXT_SOUND)
+char.double_jump_state = 1
+if (OriginsAmy.JumpStyle)
+    char.velocity.y = -0x450
+
+push(true)
+}
+else
+    push(false)
+	return
+}
+
+//@ Original function taken from sonic3air_dev/scripts/maingame/character/character.lemon
+function void ExtraChar.updateGroundMoves_char3()
+{
+#if ACHIEVEMENTS_PLUS_ACTIVE
+    if (super.active == 0x01)
+	    AchievementsPlus.AchivementsManager.setAchievementComplete(ORIGINSAMY_ACHIEVEMENT_SUPER)
+#endif
+
+    if (HammerRushTimer > 0)
+	    --HammerRushTimer
+    if (char.velocity.y < 1) && !(char.double_jump_state) && (OriginsAmy.JumpStyle)
+        {
+            char.state = char.state.ORIGINSAMY_HAMMERJUMP
+        }
+    if ((HammerRushing) && (HammerRushTimer <= 0)) || ((char.flags & char.flag.ROLLING) && (HammerRushing)) && !((char.state == char.state.GOT_HURT) || (ThrowingAnim))
+	{
+	    char.state = (char.state == char.state.ORIGINSAMY_HAMMERRUSH || char.flags & char.flag.IN_AIR) ? char.state.RUNNING : char.state.former
+	    HammerRushing = false
+        HammerRushTimer = 0
+	}
+	else if (HammerRushing) && (HammerRushTimer > 0) && (char.character == CHARACTER_SONIC) && (char.state == char.state.ORIGINSAMY_HAMMERRUSH || char.state == char.state.BRAKING || char.state == char.state.RUNNING)
+	{
+	        if (char.flags & char.flag.FACING_LEFT) && (control.player1.state & CONTROL_RIGHT)
+                char.flags &= ~char.flag.FACING_LEFT
+            else if !(char.flags & char.flag.FACING_LEFT) && (control.player1.state & CONTROL_LEFT)
+                char.flags = char.flag.FACING_LEFT
+        if (super.active)
+	        char.groundspeed = (char.flags & char.flag.FACING_LEFT) ? -0x800 : 0x800
+	    else
+	        char.groundspeed = (char.flags & char.flag.FACING_LEFT) ? -0x600 : 0x600
+	     if ((char.flags & char.flag.IN_AIR) == 0)
+	    if !(char.state == char.state.ORIGINSAMY_HAMMERRUSH || char.state == char.state.ORIGINSAMY_HAMMERJUMP)
+	        char.state.former = char.state
+
+        char.state = char.state.ORIGINSAMY_HAMMERRUSH
+	}
+    else if (super.active == 0xff) && Input.buttonPressed(OriginsAmy.ThrowButton) && !(OriginsAmy.coolDown) && !(char.state == char.state.TRANSFORMING) && (OriginsAmy.HammerCount < 5)
+    {
+        if (char.state == char.state.STANDING)
+        {
+            ThrowingAnim = true
+            char.animation.frame = 0 //reset the anim
+        }
+        OriginsAmy_Hammer.spawn()
+        #if ACHIEVEMENTS_PLUS_ACTIVE
+        	AchievementsPlus.AchivementsManager.setAchievementComplete(ORIGINSAMY_ACHIEVEMENT_HYPER)
+        #endif
+    }
+		if (sonic.dropdash_counter > 0)
+		{
+			// Check if hit the ground with drop dash charged
+			if ((sonic.dropdash_counter == DROPDASH_FULLCHARGE) && (char.flags & char.flag.IN_AIR) == 0)
+			{
+				if (char.state != char.state.WIN_POSE)		// This check is only needed for drop dash vs. win pose after FBZ 2 boss
+				{
+					releaseHammerRush()
+					OriginsAmyCharge = 0
+				}
+				else
+				{
+					// Abort drop dash (e.g. when jumping on a spring)
+					sonic.dropdash_counter = 0
+					OriginsAmyCharge = 0
+				}
+			}
+			else
+			{
+				u8 expectedState = (sonic.dropdash_counter < DROPDASH_FULLCHARGE && char.double_jump_state == 1) ? char.state.ROLLING : char.state.ORIGINSAMY_HAMMERJUMP
+				if (char.state != expectedState)
+				{
+					// Abort drop dash (e.g. when jumping on a spring)
+					sonic.dropdash_counter = 0
+				}
+			}
+        }
+    return
+}
+
+//@ Original function taken from sonic3air_dev/scripts/maingame/character/character.lemon
+function bool ExtraChar.updateNormalState_char3()
+{
+   return false
+}
+
+//@ Original function taken from sonic3air_dev/scripts/maingame/character/character.lemon
+function void ExtraChar.onCollisionWithDynamicObject_char3()
+{
+	// Example values for objA1.collision_attributes:
+	//  - 0x06, 0x0b, 0x17, 0x1a = Different types of enemies
+	//  - 0x0f		 = Boss enemy
+	//  - 0x18		 = Extended arm of DEZ Chainspike
+	//  - 0x23		 = AIZ Bloominator
+	//  - 0x46		 = Monitor
+	//  - 0x47		 = Dynamic ring
+	//  - 0x87		 = Extended arm of SOZ Skorp
+	//  - 0x8b, 0x9c = Flames, damaging parts of enemies
+	//  - 0x8f		 = Wrecking ball
+	//  - 0x98, 0x9b = Projectile
+	//  - 0xd8		 = Thrown mushroom, stars over starpost
+
+	D1.u8 = (objA1.collision_attributes & collision_attributes.flags)
+	if (D1.u8 == 0)
+	{
+		// Collision is an enemy, i.e. is harmful, but can be attacked
+		bool attacking = false
+		if (char.bonus_effect & char.bonus.INVINCIBLE || char.state == char.state.ROLLING || char.state == char.state.SPINDASH || char.state == char.state.ORIGINSAMY_HAMMERJUMP || HammerRushing)
+		{
+			attacking = true
+		}
+
+		if (!attacking)
+		{
+			bool isThreat = !(char.state == char.state.ORIGINSAMY_HAMMERJUMP || HammerRushing)
+			if (char.character == CHARACTER_KNUCKLES)
+			{
+				// Check for Knuckles' gliding and ground slide states
+				isThreat = (char.double_jump_state != 1 && char.double_jump_state != 3)
+			}
+			else if (char.character == CHARACTER_SONIC || char.double_jump_state == 0 || (char.flags & char.flag.UNDERWATER)) && !((OriginsAmyCharge) || (HammerRushing))
+			{
+				// No real special conditions for Sonic besides the drop dash
+				isThreat = true
+			}
+			else
+			{
+				// Check for if the enemy is above Tails while flying
+				s16 dx = char.position.x.u16 - objA1.position.x.u16
+				s16 dy = char.position.y.u16 - objA1.position.y.u16
+				D0.u8 = lookupAngleByVector(dx, dy) - 0x20
+				isThreat = (D0.u8 >= 0x40)
+			}
+
+			if (isThreat)
+			{
+				Character.OnThreatCollision()
+				return
+			}
+		}
+
+		if (u8[A1 + 0x29] != 0)
+		{
+			char.velocity.x = -char.velocity.x
+			char.velocity.y = -char.velocity.y
+			char.groundspeed = -char.groundspeed
+			u8[A1 + 0x1c] = A0.u8
+			u8[A1 + 0x25] = u8[A1 + 0x28]
+			u8[A1 + 0x28] = 0
+			--u8[A1 + 0x29]
+			if (u8[A1 + 0x29] == 0)
+			{
+				u8[A1 + 0x2a] |= 0x80
+			}
+
+			if (char.character == CHARACTER_KNUCKLES)
+			{
+				if (char.double_jump_state == 1)
+				{
+					char.double_jump_state = 2
+					char.state = char.state.KNUX_FALLING
+
+					if (char.velocity.x >= 0)
+						char.flags |= char.flag.FACING_LEFT
+					else
+						char.flags &= ~char.flag.FACING_LEFT
+
+					char.hitbox_extends.x = char.hitbox.default.x
+					char.hitbox_extends.y = char.hitbox.default.y
+				}
+			}
+		}
+		else
+		{
+			if (u8[A1 + 0x2a] & 0x04)
+			{
+				A2 = 0xffff0000 + u16[A1 + 0x3c]
+				u8[A2] &= ~(1 << u8[A1 + 0x3b])
+			}
+
+			u8[A1 + 0x2a] |= 0x80
+
+			// Grant bonus points
+			Enemy.addScore(A1, 0x010216)
+
+			objA1.update_address = 0x01e5e0
+			u8[A1 + 0x05] = 0
+			if (char.velocity.y < 0)
+			{
+				char.velocity.y += 0x100
+			}
+			else if (char.position.y.u16 >= objA1.position.y.u16)
+			{
+				char.velocity.y -= 0x100
+			}
+			else
+			{
+				char.velocity.y = -char.velocity.y
+			}
+		}
+	}
+	else if (D1.u8 == collision.flag.ITEM)
+	{
+		D0.u8 = (objA1.collision_attributes & collision_attributes.size)
+		if (D0.u8 != collision.size.16x16)
+		{
+			// Collect ring, but only after 30 invulnerability frames
+			//  -> Remember that the "char.invuln.countdown" timer starts at 120
+			u8 timer = competition_mode.active ? char.invuln.countdown : u8[0xffffb000 + 0x34]
+			if (timer < 90)
+			{
+				u8[A1 + 0x05] = 0x04
+			}
+		}
+		else
+		{
+			// This part seems to be for monitors specifically
+			s16 vy = (global.inv_gravity) ? -char.velocity.y : char.velocity.y
+		#if STANDALONE
+			// Calculate if the player is moving up, specifically relative to the monitor
+			vy = char.velocity.y - objA1.velocity.y
+		#endif
+			bool movingUp = (objA1.render_flags & render_flag.FLIP_Y) ? (vy > 0) : (vy < 0)
+		#if STANDALONE
+			movingUp = (vy < 0)		// Velocity is normalised for inverted gravity anyway, so no need for fancy conditional checks
+
+			// If player and monitor are at different orientations, check if player is moving down instead of up
+			if ((objA1.render_flags & render_flag.FLIP_Y) != (char.render_flags & render_flag.FLIP_Y))
+			{
+				movingUp = !movingUp
+
+				if (char.flags & char.flag.IN_AIR)
+					objA1.flags2a &= ~object.flag.P1_PUSHING
+			}
+
+			movingUp = (movingUp && (abs(char.position.x.u16 - objA1.position.x.u16) < 0x12 || char.state == char.state.ROLLING))		// only bounce at a certain distance, otherwise push the player away when falling, #contributed by GFX32
+		#endif
+			if (movingUp)
+			{
+			#if STANDALONE
+				if ((objA1.flags2a & object.flag.P1_PUSHING) && (char.flags & char.flag.IN_AIR))
+				{
+					// In S3AIR, do not allow S&K's monitor opening from the side
+					//  -> This is done to be more consistent with other Sonic games, incl. Sonic 1, 2, CD, Mania and even Sonic 3 alone
+					//  -> The first check above tells us if the character is on a side of the monitor
+					//  -> The second one makes sure that you can always ground-based roll into a monitor (see e.g. first invincibility in MHZ 1, when spindashing into it from the right)
+					return
+				}
+				else if (Game.getSetting(SETTING_MONITOR_BEHAVIOR) == 0)
+				{
+					// All you really need for Sonic & Knuckles monitor Behavior. everything else relevant is handled elsewhere
+					char.velocity.y = -char.velocity.y
+				}
+				else
+				{
+					// Improved code to prevent crushing and allow bouncing on ground, #contributed by GFX32
+
+					// If the player is below the monitor, it should bounce.
+					bool isBelow = (char.position.y.u16 > (objA1.position.y.u16 + objA1.hitbox_extends.y))
+
+					if (objA1.render_flags & render_flag.FLIP_Y)
+						isBelow = (char.position.y.u16 < (objA1.position.y.u16 - objA1.hitbox_extends.y))
+
+					// Not when spindashing!
+					if (char.state == char.state.SPINDASH)
+						isBelow = false
+
+					if (isBelow)
+					{
+						// Hit monitor from below, make it fall
+						u8[A1 + 0x3c] = 1
+
+						char.velocity.y = -char.velocity.y
+						objA1.velocity.y = -0x180
+
+						// Calculate how far the monitor is inside the player, then separate them; this attempts to prevent crushing collision on subsequent frames.
+						s16 dy = (objA1.position.y.u16 + objA1.hitbox_extends.y) - (char.position.y.u16 - char.hitbox_extends.y)
+
+						if (objA1.render_flags & render_flag.FLIP_Y)
+							dy = (objA1.position.y.u16 - objA1.hitbox_extends.y) - (char.position.y.u16 + char.hitbox_extends.y)
+
+						// Only push the player when in midair
+						if (char.flags & char.flag.IN_AIR)
+						{
+							dy /= 2
+							char.position.y.u16 += dy
+						}
+						objA1.position.y.u16 -= dy
+
+						if (u8[A1 + 0x3c] == 0)
+							u8[A1 + 0x3c] = 4
+
+						return
+					}
+				}
+			#else
+				if (objA1.flags2a & char.flag.IN_AIR)
+				{
+					// This block is a bit broken due to the above check, and falling monitors can crush the player, and is this really what we want?
+
+					if ((objA1.render_flags & render_flag.FLIP_Y) == 0)
+					{
+						if (char.position.y.u16 - 0x10 < objA1.position.y.u16)
+							return
+					}
+					else
+					{
+						if (char.position.y.u16 + 0x10 >= objA1.position.y.u16)
+							return
+					}
+
+					char.velocity.y = -char.velocity.y
+					objA1.velocity.y = -0x180
+					if (u8[A1 + 0x3c] == 0)
+						u8[A1 + 0x3c] = 4
+
+					return
+				}
+			#endif
+			}
+
+			if (A0 != 0xffffb000 && competition_mode.active == 0)
+			{
+				// Sorry player 2, you can't open monitors in normal game
+				return
+			}
+
+			bool canOpenMonitor = false
+			if (char.state == char.state.ROLLING) || (char.state == char.state.ORIGINSAMY_HAMMERJUMP) || HammerRushing
+			{
+				canOpenMonitor = true
+			}
+		#if STANDALONE
+			else if (char.state == char.state.SPINDASH)
+			{
+				canOpenMonitor = true
+			}
+			else if (objA1.velocity.y < 0)
+			{
+				// Make monitors break over the player's head at different orientations. #contributed by Dynamic Lemons
+				if ((global.inv_gravity != (objA1.render_flags & render_flag.FLIP_Y) != 0))
+					canOpenMonitor = true
+			}
+		#endif
+			else if (char.character == CHARACTER_KNUCKLES)
+			{
+				// Check if Knuckles glides into the monitor
+				canOpenMonitor = (char.double_jump_state == 1 || char.double_jump_state == 3)
+			}
+
+			if (canOpenMonitor)
+			{
+			#if STANDALONE
+				if (!movingUp)
+			#endif
+				{
+					// Bounce off
+					char.velocity.y = -char.velocity.y
+				}
+				objA1.base_state = 0x04		// Set monitor state to broken
+				objA1.monitor.character_address = A0.u16		// RAM address of character
+			}
+		}
+	}
+	else if (D1.u8 == collision.flag.THREAT)
+	{
+		// Harmful object
+		Character.OnThreatCollision()
+	}
+	else  // D1.u8 == collision.flag.SPECIAL
+	{
+		// Other interactable object
+		fn0103ba()
+	}
+}
+
+function void ExtraChar.onThreatCollision_char3()
+{
+	// Check for shield or invincibility
+	D0.u8 = char.bonus_effect & 0x73
+	if (D0.u8 != 0)
+	{
+		D0.u8 &= u8[A1 + 0x2b]
+		if (D0.u8 != 0)
+		{
+			D0 = 0xffffffff
+			return
+		}
+
+		if ((char.bonus_effect & char.bonus.ANY_SHIELD) == 0)
+		{
+			if ((char.bonus_effect & char.bonus.INVINCIBLE) == 0)
+			{
+				Character.OnThreatCollisionInner()
+			}
+			D0 = 0xffffffff
+			return
+		}
+	}
+	else
+	{
+		// Amy can deflect projectiles when the hammer is present
+		bool canDeflect = (char.state == char.state.ORIGINSAMY_HAMMERJUMP) || HammerRushing
+	#if STANDALONE
+		// Different approach for Tails: Deflect only projectiles that are above him, and only if flying
+		if (char.character == CHARACTER_TAILS)
+		{
+			canDeflect = (s16(objA1.position.y.u16) < s16(objA0.position.y.u16)) && (char.state == char.state.TAILS_FLYDOWN || char.state == char.state.TAILS_FLYUP || char.state == char.state.TAILS_CARRYDOWN || char.state == char.state.TAILS_CARRYUP)
+		}
+	#endif
+		if (!canDeflect)
+		{
+			Character.OnThreatCollisionInner()
+			return
+		}
+	}
+
+	if ((u8[A1 + 0x2b] & 0x08) == 0)
+	{
+		if ((char.bonus_effect & char.bonus.INVINCIBLE) == 0)
+		{
+			Character.OnThreatCollisionInner()
+		}
+	}
+	else
+	{
+		deflectProjectile()
+	}
+	D0 = 0xffffffff
+}
+
+function bool ExtraChar.checkStartJump_char3()
+{
+	u8 input_pressed = (char.character == CHARACTER_TAILS) ? control.tails.pressed : control.player1.pressed
+	if ((input_pressed & CONTROL_ABC) == 0) || (Input.buttonPressed(OriginsAmy.ThrowButton)) && (char.character == CHARACTER_SONIC)
+		return false
+
+	D0 = char.rotation
+	if (global.inv_gravity)
+	{
+		D0.s8 = -D0.s8
+	}
+	else
+	{
+		D0.s8 += 0x80
+	}
+
+	pushA456()
+	fn00f72e()
+	popA456()
+
+	if (D1.s16 < 6)
+		return false
+HammerRushing = false
+	// Get jump acceleration depending on character
+	u16 acceleration
+	if (char.character != CHARACTER_KNUCKLES || competition_mode.active)
+	{
+		if (char.flags & char.flag.UNDERWATER)
+		{
+			acceleration = 0x380
+		}
+		else if (super.active && char.character == CHARACTER_SONIC)
+		{
+			acceleration = 0x800
+		}
+		else
+		{
+			acceleration = 0x680
+		}
+	}
+	else
+	{
+		if (char.flags & char.flag.UNDERWATER)
+		{
+			acceleration = 0x300
+		}
+		else
+		{
+			acceleration = 0x600
+		}
+	}
+
+	u8 angle = char.rotation - 0x40
+	s32 accel_x = (s32(lookupCos(angle)) * acceleration) >> 8
+	s32 accel_y = (s32(lookupSin(angle)) * acceleration) >> 8
+
+	char.velocity.x += accel_x
+	char.velocity.y += accel_y
+
+	char.flags |= char.flag.IN_AIR
+	char.flags &= ~char.flag.PUSHING
+
+	char.jumping = 1
+	char.on_convex_surface = 0
+
+	playSound(SFX_JUMP)
+
+	// Start roll jump
+	if (char.flags & char.flag.ROLLING)
+	{
+	#if STANDALONE
+		if (!Game.getSetting(SETTING_NO_CONTROL_LOCK))
+	#endif
+		{
+			char.hitbox_extends.x = char.hitbox.default.x
+			char.hitbox_extends.y = char.hitbox.default.y
+			char.flags |= char.flag.CONTROL_LOCK
+		}
+	}
+	else
+	{
+		char.hitbox_extends.x = 7
+		char.hitbox_extends.y = 14
+		char.flags |= char.flag.ROLLING
+		char.state = char.state.ROLLING
+
+		s8 dy = s8(char.hitbox_extends.y) - s8(char.hitbox.default.y)
+		char.position.y.u16 += global.inv_gravity ? dy : -dy
+
+	#if STANDALONE
+		// Glitch fix for Knuckles being unable to jump off underwater objects
+		//  -> Move him up a single pixel up so he won't stick to objects
+		// TODO: Does not work for the HCZ snake platforms
+		if (acceleration <= 0x300 && (char.flags & char.flag.ON_OBJECT))
+		{
+			--char.position.y.u16
+		}
+	#endif
+	}
+	return true
+}
+
+function string ExtraChar.getCharacterName(u8 xtrachar)
+{
+    if (xtrachar == 3)
+        return "Amy (Sonic Origins)"
+    return base.ExtraChar.getCharacterName(xtrachar)
+}
+
+//Yes, it takes 132 sprites to get to the loop point.
+constant array<u64> ORIGINSAMY_IDLEANIM =
+{
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20",
+}
+
+function u64 Standalone.getModdedAnimationSpriteKey(u8 character, u16 animationSpriteEx)
+{
+    if !((char.state == char.state.ORIGINSAMY_HAMMERJUMP) || (HammerRushing) || (char.state == char.state.WIN_POSE) || (((char.animation.sprite >= 0xbb) && (char.animation.sprite <= 0xc2)) || ((char.animation.sprite >= 0xad) && (char.animation.sprite <= 0xaf)) || (char.animation.sprite == 0xd9)) || (ThrowingAnim)) || !(character == CHARACTER_SONIC) || !(u8[0xffffe654] == 3)
+        return base.Standalone.getModdedAnimationSpriteKey(character, animationSpriteEx)
+
+if (character == CHARACTER_SONIC)
+{
+    if (char.state == char.state.ORIGINSAMY_HAMMERJUMP) || (char.state == char.state.ORIGINSAMY_HAMMERRUSH)
+    {
+		if (char.animation.timer > 3)
+			char.animation.timer = 3
+		if (char.animation.timer == 0)
+		{
+			char.animation.timer = 3
+			++char.animation.frame
+		}
+		if (char.animation.frame > 7)
+		    char.animation.frame = 0
+	}
+	else if (char.state == char.state.WIN_POSE)
+	{
+		if (char.animation.timer > 3)
+	    	char.animation.timer = 3
+		if (char.animation.timer == 0)
+		{
+			char.animation.timer = 3
+			++char.animation.frame
+		}
+		if (char.animation.frame > 13)
+		    char.animation.frame = 13
+	}
+	else if ((char.animation.sprite >= 0xbb) && (char.animation.sprite <= 0xc2)) || ((char.animation.sprite >= 0xad) && (char.animation.sprite <= 0xaf)) || (char.animation.sprite == 0xd9) && (char.state == char.state.STANDING) && !(ThrowingAnim)
+	{
+		if (char.animation.timer > 10)
+	    	char.animation.timer = 10
+		if (char.animation.timer == 0)
+		{
+			char.animation.timer = 10
+			++char.animation.frame
+		}
+		if (char.animation.frame > 132)
+		    char.animation.frame = 68
+	}
+
+    if (ThrowingAnim)
+	{
+	    if (char.animation.timer > 5)
+			char.animation.timer = 5
+		if (char.animation.timer == 0)
+		{
+			char.animation.timer = 5
+			++char.animation.frame
+		}
+		if (char.animation.frame > 3)
+		    ThrowingAnim = false
+	}
+        ++hammer.anim
+        if (OriginsAmy.coolDown)
+            --OriginsAmy.coolDown
+
+    if (ThrowingAnim)
+        return stringformat("character_slot3_throw_%d",  char.animation.frame)
+    else if ((char.animation.sprite >= 0xbb) && (char.animation.sprite <= 0xc2)) || ((char.animation.sprite >= 0xad) && (char.animation.sprite <= 0xaf)) || (char.animation.sprite == 0xd9) && (char.state == char.state.STANDING) && !(ThrowingAnim)
+        return stringformat("character_slot3_idle_%s",  ORIGINSAMY_IDLEANIM[char.animation.frame])
+    else if (char.state == char.state.ORIGINSAMY_HAMMERJUMP)
+        return stringformat("character_slot3_hammerspin_%d",  char.animation.frame)
+    else if (HammerRushing)
+        return stringformat("character_slot3_hammerrush_%d",  char.animation.frame)
+    else if (char.state == char.state.WIN_POSE)
+        return stringformat("character_slot3_victory_%d",  char.animation.frame)
+}
+return base.Standalone.getModdedAnimationSpriteKey(character, animationSpriteEx)
+}
+
+function void Character.updateJumpMoves()
+{
+	if (char.jumping) && (u8[0xffffe654] == 3) && (char.character == CHARACTER_SONIC)
+	{
+		bool chargeHammerRush = (((control.player1.state & CONTROL_A) && !(OriginsAmy.ThrowButton == 0x06)) || ((control.player1.state & CONTROL_B) && !(OriginsAmy.ThrowButton == 0x04)) || ((control.player1.state & CONTROL_C) && !(OriginsAmy.ThrowButton == 0x05))) && (char.double_jump_state == 1) && !(char.state == char.state.HANGING || char.state == char.state.SONIC_HANGON)
+
+        if (char.state == char.state.HANGING || char.state == char.state.SONIC_HANGON)
+            chargeHammerRush = false
+
+    	if (chargeHammerRush)
+    	{
+    		char.state = char.state.ORIGINSAMY_HAMMERJUMP
+    		++OriginsAmyCharge
+    		    if (OriginsAmyCharge >= DROPDASH_FULLCHARGE)
+    		        sonic.dropdash_counter = DROPDASH_FULLCHARGE
+    	}
+    	else
+    	{
+    		// Abort drop dash
+    		OriginsAmyCharge = 0
+    		sonic.dropdash_counter = 0
+    		char.state = char.state.ROLLING
+    	}
+    }
+base.Character.updateJumpMoves()
+}
+
+function void releaseHammerRush()
+{
+    Audio.playAudio(SFX_SPINDASH_RELEASE, AudioContext.CONTEXT_SOUND)
+    char.state = char.state.ORIGINSAMY_HAMMERRUSH
+    OriginsAmyCharge = 0
+    sonic.dropdash_counter = 0
+    HammerRushing = true
+    HammerRushTimer = 60
+}
+
+function void Standalone.playAudio(u8 sfxId)
+{
+if (sfxId == SFX_BRAKE) && (char.state == char.state.ORIGINSAMY_HAMMERRUSH) && (u8[0xffffe654] == 3) && (char.character == CHARACTER_SONIC)
+    return
+else
+    base.Standalone.playAudio(sfxId)
+}
+
+//# address-hook(0x010afa) end(0x010bb8)
+function void Character.Initialization.Sonic()
+{
+    OriginsAmyCharge = 0
+    sonic.dropdash_counter = 0
+    HammerRushing = false
+    HammerRushTimer = 0
+base.Character.Initialization.Sonic()
+}
+
+//# address-hook(0x0122be) end(0x012312)
+function void Character.UpdateGotHurtState.Sonic()
+{
+    OriginsAmyCharge = 0
+    sonic.dropdash_counter = 0
+    HammerRushing = false
+    HammerRushTimer = 0
+base.Character.UpdateGotHurtState.Sonic()
+}
+
+//# translated(0x0879a8) end(0x0879da)
+function bool fn0879a8()
+{
+	fn085870()
+	if (_equal())
+	{
+		return false
+	}
+
+	fn0857c2()
+	if (_equal())
+	{
+		if (u8[A1 + 0x34] == 0) && !((char.state == char.state.ORIGINSAMY_HAMMERJUMP) || (HammerRushing) && (u8[0xffffe654] == 3)) && (char.character == CHARACTER_SONIC)
+		{
+			Enemy.DamageCharacter()
+		}
+		return false
+	}
+
+	D0.u16 = objA0.subtype2c & 0x0f
+	A3 = 0xfffff7e0
+	u8[A3 + D0.s16] = 0xff
+	fn085732()
+	DrawObject()
+	return true
+}
+
+//# address-hook(0x0857c2) end(0x0857e6)
+function void fn0857c2()
+{
+	if (u8[A1 + 0x2b] & char.bonus.INVINCIBLE || u8[A1 + 0x20] == char.state.ROLLING || u8[A1 + 0x20] == char.state.ORIGINSAMY_HAMMERRUSH || u8[A1 + 0x20] == char.state.ORIGINSAMY_HAMMERJUMP) && (u8[0xffffe654] == 3) && (char.character == CHARACTER_SONIC)
+	{
+		fn085822()
+		return
+	}
+base.fn0857c2()
+}
+
+function bool Character.updateSuperPeelout()
+{
+    if (u8[0xffffe654] == 3)
+        return false
+return base.Character.updateSuperPeelout()
+}
+
+function void Character.cancelSuperTransformation()
+{
+    if (!(OriginsAmy.ThrowButton == 0x09) && (control.player1.state & OriginsAmy.ThrowButton)) || ((OriginsAmy.ThrowButton == 0x09) && (Input.buttonPressed(OriginsAmy.ThrowButton))) && (u8[0xffffe654] == 3) && (char.character == CHARACTER_SONIC)
+        return
+base.Character.cancelSuperTransformation()
+}
+
+//# address-hook(0x012232) end(0x0122b8)
+function void SonicLandingBubbleBounce()
+{
+    if (u8[0xffffe654] == 3)
+        return
+base.SonicLandingBubbleBounce()
+}
+
+//# address-hook(0x012600) end(0x01286c)
+//# translated(0x012a2a) end(0x012a6e)
+function void UpdateSonicAnimation()
+{
+    if !(u8[0xffffe654] == 3)
+    {
+        base.UpdateSonicAnimation()
+        return
+    }
+
+	if (char.state != char.state.former)
+	{
+		char.state.former = char.state
+		char.animation.frame = 0
+		char.animation.timer = 0
+		char.flags &= ~char.flag.PUSHING
+	}
+
+	A1 = 0x012aa6
+	A1 = tableLookupAddress(A1, char.state * 2)
+	D0.u8 = u8[A1]
+
+	// D0.u8 is either:
+	//  - 0xff when running
+	//  - 0xfe when rolling (on ground or in air)
+	//  - between 0x00 and 0x7f in other cases (like standing, balancing, spring-jumping, getting hurt, etc.)
+	if (char.state == char.state.HANGING || char.state == char.state.SONIC_HANGON)
+	{
+	    fn03efba()
+	}
+    else if (char.state == 0x31)
+    {
+        System.callFunctionByName("UpdateAnimSpringTwirl")
+    }
+    else if (char.state == 0x36)
+    {
+		System.callFunctionByName("UpdateFallingAnimation")
+	}
+	else if (D0.u8 < 0x80)
+	{
+		updateSonicAnimationStanding()
+	}
+	else if (D0.u8 == 0xff)
+	{
+		updateSonicAnimationRunning()
+	}
+	else // if (D0.u8 == 0xfe)
+	{
+		updateSonicAnimationRolling()
+	}
+}
+
+function string getESCharacterFallSpriteKey(u8 character, u8 extrachar)
+{
+    if (extrachar == 3) && (character == CHARACTER_SONIC)
+        return "slot3_falling_%d"
+
+return base.getESCharacterFallSpriteKey(character, extrachar)
+}
+
+//# address-hook(0x0221ec) end(0x022246)
+function void fn0221ec()
+{
+    if !(global.xtrachar == 3)
+    {
+        base.fn0221ec()
+        return
+    }
+	if (u16[A0 + 0x30] != 0)
+	{
+		fn022258()
+		return
+	}
+
+	fn02219e()
+	objA1.position.x.u16 = objA0.position.x.u16
+	objA1.position.y.u16 = objA0.position.y.u16 + 0x14
+
+	A3 = 0xffff0000 + u16[A0 + 0x3c]
+	D0 = u8[A3 + 0x26]
+	if (u8[A1 + 0x2a] & char.flag.FACING_LEFT)
+		D0.s8 = -D0.s8
+
+	D0.u16 = u8(D0.u8 + 8) >> 4
+	objA1.animation.sprite = u8[0x022248 + D0.u16]		// Player characters' hanging sprites
+	objA1.state = char.state.HANGING
+	fn022224()
+}
+
+function u64 GetXtraName(u8 xtrachar, u8 char)
+{
+	if (xtrachar == 3 && char == CHARACTER_SONIC)
+		return "OriginsAmy"
+
+	return base.GetXtraName(xtrachar, char)
+}
+
+function void releaseDropDash()
+{
+    if (global.xtrachar == 3)
+    {
+        releaseHammerRush()
+        return
+    }
+base.releaseDropDash()
+}
+
+//# address-hook(0x0396e4) end(0x03977a)
+function void fn0396e4()
+{
+    if !(global.xtrachar == 3)
+        base.fn0396e4()
+}
+
+//# address-hook(0x010a94) end(0x010ae8)
+function void Character.BaseUpdate.Sonic()
+{
+    if (global.xtrachar == 3)
+    {
+        ++hammer.anim
+        if (OriginsAmy.coolDown)
+            --OriginsAmy.coolDown
+    }
+base.Character.BaseUpdate.Sonic()
+}
+
+//# address-hook(0x021568) end(0x021690)
+function void fn021568()
+{
+    if !(global.xtrachar == 3)
+    {
+        base.fn021568()
+        return
+    }
+	u16[A0 + 0x30] = u16[0xffffb000 + 0x18]
+	objA0.value32 = u16[0xffffb04a + 0x18]
+
+	D1 = objA0.box_size.x + 11
+	D2 = objA0.box_size.y
+	D3.u16 = D2.u16 + 1
+	D4.u16 = objA0.position.x.u16
+	fn01dc56()
+
+	if (u8[A0 + 0x2c] & 0x80)
+	{
+		if (level.trigger00 == 0)
+		{
+			DrawOrUnloadObject()
+		}
+		else
+		{
+			UnloadObject()
+		}
+		return
+	}
+
+	D6 = (D6 << 16) + (D6 >> 16)
+	D6.u16 &= 0x03
+	if (D6.u16 == 0)
+	{
+		DrawOrUnloadObject()
+		return
+	}
+
+	A1 = 0xffffb000
+	D1.u16 = u16[A0 + 0x30]
+	if (D6.u16 & 0x01)
+	{
+		bool canBreakWall = false
+		if (super.active || u8[A1 + 0x38] == CHARACTER_KNUCKLES) || (HammerRushing) || (char.state == char.state.ORIGINSAMY_HAMMERJUMP)
+		{
+			// Super/Hyper forms can break walls, and Knuckles can
+			canBreakWall = true
+		}
+		else
+		{
+			// Does this wall allow for rolling into the wall? Otherwise the fire shield will do
+			if ((objA0.flags2a & object.flag.P1_PUSHING) || (u8[A1 + 0x2b] & char.bonus.SHIELD_FIRE))
+			{
+				canBreakWall = (objA1.state == char.state.ROLLING && abs(D1.s16) >= 0x0480)
+			}
+		}
+
+		if (canBreakWall)
+		{
+			objA0.flags2a &= ~object.flag.P1_PUSHING
+			fn02165a()
+
+			A1 = 0xffffb04a
+			if ((objA0.flags2a & object.flag.P2_PUSHING) && objA1.state == char.state.ROLLING)
+			{
+				objA0.flags2a &= ~object.flag.P2_PUSHING
+				objA1.velocity.x = objA0.value32
+				objA1.groundspeed = objA1.velocity.x
+				objA1.flags2a &= ~char.flag.PUSHING
+			}
+
+			DrawOrUnloadObject()
+			return
+		}
+	}
+
+	A1 = 0xffffb04a
+	D1.u16 = objA0.value32
+	if ((objA0.flags2a & object.flag.P2_PUSHING) && objA1.state == char.state.ROLLING && abs(D1.s16) >= 0x0480)
+	{
+		objA0.flags2a &= ~object.flag.P2_PUSHING
+		fn02165a()
+
+	#if STANDALONE
+		if (Game.getSetting(SETTING_FIX_GLITCHES) >= 2)
+		{
+			// Prevent slope glitch here for player 1
+			if ((u8[0xffffb000 + 0x2a] & char.flag.ON_OBJECT) && u16[0xffffb000 + 0x42] == A0.u16)
+			{
+				u8[0xffffb000 + 0x2a] &= ~char.flag.ON_OBJECT
+				u8[0xffffb000 + 0x2a] |= char.flag.IN_AIR
+			}
+		}
+	#endif
+	}
+#if STANDALONE
+	else if (global.zone == 0x02)
+	{
+		// In MGZ, make all normal breakable walls also breakable by spinning top
+		D6 = (D6 << 16) + (D6 >> 16)
+		fn021758()
+	}
+#endif
+	else
+	{
+		DrawOrUnloadObject()
+	}
+}
